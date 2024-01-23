@@ -1,0 +1,112 @@
+#include <string.h>
+
+// Sensor pins
+#define sensorPower 7
+#define sensorPin A0
+
+// Value for storing water level
+int val = 0;
+
+int tuningVals[3] = {0,0,0};
+
+void setup() {
+  Serial.begin(9600);
+
+  Serial.println("Setting up...");
+
+	// Set D7 as an OUTPUT
+	pinMode(sensorPower, OUTPUT);
+	
+	// Set to LOW so no power flows through the sensor
+	digitalWrite(sensorPower, LOW);
+
+  tune(tuningVals);
+  Serial.println(tuningVals[0]);
+  Serial.println(tuningVals[1]);
+  Serial.println(tuningVals[2]);
+
+
+  Serial.println("Ready!");
+}
+
+void loop() {
+	//get the reading from the function below and print it
+	int level = readSensor();
+
+	Serial.print("Water level: ");
+
+  char lvlC[5];
+  sprintf(lvlC, "%4d", level);
+  Serial.print(lvlC);
+  Serial.print(" | ");
+  printRel(level, tuningVals);
+  Serial.println();
+	
+	delay(500);
+}
+
+//This is a function used to get the reading
+int readSensor() {
+	digitalWrite(sensorPower, HIGH);	// Turn the sensor ON
+	delay(10);							// wait 10 milliseconds
+	val = analogRead(sensorPin);		// Read the analog value from sensor
+	digitalWrite(sensorPower, LOW);		// Turn the sensor OFF
+	return val;							// send current reading
+}
+
+void printRel(int l, int tuningVals[]) {       // print out height of water to sensor 
+  if (l >= tuningVals[0]) {
+    Serial.print("High");
+  }
+  else if (l >= tuningVals[1]) {
+    Serial.print("Mid");
+  }
+  else if (l >= tuningVals[2]) {
+    Serial.print("Low");
+  }
+  else {
+    Serial.print("Dry");
+  }
+  return;
+}
+
+int tune(int tVals[])
+{
+  const char* names[3] = {"HIGH", "MID", "LOW"};
+  
+  for (int i = 0; i < 3; i++) {  
+    Serial.print(names[i]);
+    Serial.println(" TUNING IN 3 BLINKS");
+
+    for (int j = 0; j < 3; j++)
+    {
+    //blink 3 times before measuring
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(1000);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(1000);
+    }
+
+    Serial.print(names[i]);
+    Serial.println(" - START");
+    //start flexing/relaxing
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+    for (int j = 0; j < 20; j++)
+    {
+        tVals[i] += readSensor();
+        delay(100);
+        Serial.println(readSensor());
+        //Serial.println(avg);
+    }
+
+    delay(1000);
+    digitalWrite(LED_BUILTIN, LOW);
+    noTone(12);
+    Serial.println("STOP");
+    tVals[i] /= 20.0;
+    
+  }
+
+  return;
+}
